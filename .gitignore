@@ -1,0 +1,7 @@
+venv/
+spieltage.csv
+.idea/
+node_modules/
+geckodriver.log
+package-lock.json
+credentials.txt
