@@ -1,5 +1,6 @@
 venv/
 spieltage.csv
+__pycache__
 .idea/
 node_modules/
 geckodriver.log
