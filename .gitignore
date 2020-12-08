@@ -1,5 +1,7 @@
 venv/
-spieltage.csv
+spieltage_*.csv
+*.png
+graphs/
 __pycache__
 .idea/
 node_modules/

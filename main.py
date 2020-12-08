@@ -2,64 +2,95 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 import csv
 
-options = Options()
-options.headless = True
-driver = webdriver.Firefox(options=options)  #
 
-classNames = ['name', 'ereignis0', 'ereignis1', 'ereignis2', 'ereignis3', 'ereignis4', 'ereignis5', 'ereignis6',
-              'ereignis7', 'ereignis8']
+def read_kicktipp_group():
+    credentials = open("credentials.txt", "r")
+    line = credentials.readlines()[1]
+    splitter = line.find(':')
+    return line[splitter + 1:]
 
-spieltage = {}
 
-credentials = open("credentials.txt", "r")
-line = credentials.readlines()[1]
-splitter = line.find(':')
-kicktippGroup = line[splitter + 1:]
+def get_table_headers():
+    return ['name', 'ereignis0', 'ereignis1', 'ereignis2', 'ereignis3', 'ereignis4', 'ereignis5', 'ereignis6',
+            'ereignis7', 'ereignis8']
 
-for x in range(1, 35):
-    url = "https://www.kicktipp.de/" + kicktippGroup + "/tippuebersicht?&spieltagIndex=" + str(x)
 
-    driver.get(url)
+def get_data_from_kicktipp(kicktipp_group: str):
+    options = Options()
+    options.headless = True
+    driver = webdriver.Firefox(options=options)
 
-    spieltag = {}
-    table = driver.find_element_by_id('ranking')
+    class_names = get_table_headers()
 
-    headerElem = table.find_element_by_class_name('headerErgebnis')
-    header = {}
-    headerName = "Spieltag " + str(x)
-    header[classNames[0]] = headerName
-    for val in range(1, len(classNames)):
-        header[classNames[val]] = headerElem.find_element_by_class_name(classNames[val]).text
-    spieltag[headerName] = header
+    spieltage = {}
 
-    body = table.find_element_by_tag_name("tbody")
-    trs = body.find_elements_by_tag_name("tr")
-    for tr in trs:
-        player = {}
-        playerName = tr.find_element_by_class_name(classNames[0]).text
-        player[classNames[0]] = playerName
-        for val in range(1, len(classNames)):
-            elem = tr.find_element_by_class_name(classNames[val])
-            value = elem.text
-            children = elem.find_elements_by_css_selector("*")
-            if children:
-                text = ""
-                for webElem in children:
-                    text += webElem.text
-                value = value[0:len(value) - len(text)]
-            player[classNames[val]] = value
-        spieltag[playerName] = player
+    for x in range(1, 35):
+        url = "https://www.kicktipp.de/" + kicktipp_group + "/tippuebersicht?&spieltagIndex=" + str(x)
 
-    spieltage[x] = spieltag
+        driver.get(url)
 
-myFile = open('spieltage.csv', 'w', newline='')
+        spieltag = {}
+        table = driver.find_element_by_id('ranking')
 
-with myFile:
-    writer = csv.DictWriter(myFile, fieldnames=classNames)
-    writer.writeheader()
-    for spieltagID, werte in spieltage.items():
-        writer.writerow({})
-        for name, values in werte.items():
-            writer.writerow(values)
+        header_elem = table.find_element_by_class_name('headerErgebnis')
+        header = {}
+        header_name = "Spieltag " + str(x)
+        header[class_names[0]] = header_name
+        for val in range(1, len(class_names)):
+            real_result = header_elem.find_element_by_class_name(class_names[val]).text
+            if len(real_result) > 5:
+                splitted_result = real_result.split('\n')
+                real_result = splitted_result[2]
 
-driver.close()
+            if real_result == "-:-":
+                return spieltage
+
+            header[class_names[val]] = real_result
+
+        spieltag[header_name] = header
+
+        body = table.find_element_by_tag_name("tbody")
+        trs = body.find_elements_by_tag_name("tr")
+        for tr in trs:
+            player = {}
+            player_name = tr.find_element_by_class_name(class_names[0]).text
+            player[class_names[0]] = player_name
+            for val in range(1, len(class_names)):
+                elem = tr.find_element_by_class_name(class_names[val])
+                value = elem.text
+                children = elem.find_elements_by_css_selector("*")
+                if children:
+                    text = ""
+                    for webElem in children:
+                        text += webElem.text
+                    value = value[0:len(value) - len(text)]
+                player[class_names[val]] = value
+            spieltag[player_name] = player
+
+        spieltage[x] = spieltag
+
+    driver.close()
+
+    return spieltage
+
+
+def write_file(kicktipp_group: str, spieltage: dict):
+    my_file = open('spieltage_' + kicktipp_group + '.csv', 'w', newline='')
+
+    with my_file:
+        writer = csv.DictWriter(my_file, fieldnames=get_table_headers())
+        writer.writeheader()
+        for spieltagID, werte in spieltage.items():
+            writer.writerow({})
+            for name, values in werte.items():
+                writer.writerow(values)
+
+
+def main():
+    kicktipp_group = read_kicktipp_group()
+    spieltage = get_data_from_kicktipp(kicktipp_group)
+    write_file(kicktipp_group, spieltage)
+
+
+if __name__ == "__main__":
+    main()

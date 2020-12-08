@@ -1,9 +1,12 @@
 import csv
 import constant
 
+import main as module_main
+
 
 def read_file():
-    file = open("spieltage.csv", "r")
+    kicktipp_group = module_main.read_kicktipp_group()
+    file = open("spieltage_" + kicktipp_group + ".csv", "r")
     spieltage = {}
     with file:
         reader = csv.DictReader(file)
@@ -33,6 +36,8 @@ def print_dict(data_dict: dict):
 
 def get_values(result: str):
     if not result:
+        return None
+    elif result == '-:-':
         return None
     else:
         splitter = result.find(':')
@@ -76,13 +81,10 @@ def calculate_new_table(data_dict: dict):
             else:
                 for event, tipp in values.items():
                     if event == 'name':
-                        continue
+                        overall[tipp] = 0
                     else:
-                        if player not in overall:
-                            overall[player] = 0
-                        else:
-                            value = get_result(values[event], ref[event])
-                            overall[player] = int(overall[player]) + value
+                        value = get_result(values[event], ref[event])
+                        overall[player] = int(overall[player]) + value
     return overall
 
 
